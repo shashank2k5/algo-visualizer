@@ -3,8 +3,11 @@ const speedSlider = document.getElementById("speed");
 let array = [];
 let abort = false;
 let isSorting = false;
+let isPaused = false;
 
 const logList = document.getElementById("log-list");
+const stopBtn = document.getElementById("stop");
+const resumeBtn = document.getElementById("resume");
 
 // Complexity Chart
 function renderComplexityChart() {
@@ -73,12 +76,33 @@ function addLog(message, type = "default") {
 
 // Generate random array
 function generateArray() {
-    if (isSorting) return;
+    // If sorting is active (including paused), abort it
+    if (isSorting) {
+        abort = true;
+        if (isPaused) {
+            isPaused = false; // Unpause to allow abort to process
+        }
+        // Wait a bit for abort to process
+        setTimeout(() => {
+            abort = false;
+            actuallyGenerateArray();
+        }, 100);
+        return;
+    }
+
+    actuallyGenerateArray();
+}
+
+function actuallyGenerateArray() {
     const size = 15; // Fixed reasonable size for visualization
     array = [];
     barsContainer.innerHTML = "";
     if (logList) logList.innerHTML = ""; // Clear logs
     document.getElementById("custom-input").value = "";
+
+    // Reset pause state
+    isPaused = false;
+    hideResumeButton();
 
     for (let i = 0; i < size; i++) {
         let val = Math.floor(Math.random() * 90) + 10;
@@ -121,11 +145,28 @@ function scrollToBars() {
 
 
 async function checkAbort() {
+    // Wait while paused
+    while (isPaused) {
+        await sleep(100);
+    }
+
     if (abort) {
         isSorting = false;
+        isPaused = false;
         throw new Error("Aborted");
     }
     await sleep(getDelay());
+}
+
+// Helper functions for pause/resume
+function showResumeButton() {
+    resumeBtn.style.display = 'inline-block';
+    stopBtn.style.display = 'none';
+}
+
+function hideResumeButton() {
+    resumeBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
 }
 
 async function updateBar(idx, height, color = null) {
@@ -256,6 +297,8 @@ async function bubbleSort() {
         addLog("Sorting Aborted", "swap");
     } finally {
         isSorting = false;
+        isPaused = false;
+        hideResumeButton();
     }
 }
 
@@ -299,7 +342,11 @@ async function selectionSort() {
     } catch (e) {
         if (e.message !== "Aborted") console.error(e);
         addLog("Sorting Aborted", "swap");
-    } finally { isSorting = false; }
+    } finally {
+        isSorting = false;
+        isPaused = false;
+        hideResumeButton();
+    }
 }
 
 // Insertion Sort
@@ -333,7 +380,11 @@ async function insertionSort() {
     } catch (e) {
         if (e.message !== "Aborted") console.error(e);
         addLog("Sorting Aborted", "swap");
-    } finally { isSorting = false; }
+    } finally {
+        isSorting = false;
+        isPaused = false;
+        hideResumeButton();
+    }
 }
 
 // Merge Sort
@@ -435,9 +486,21 @@ document.getElementById("custom-input").addEventListener("change", (e) => {
     }
 });
 
+// Pause button
 document.getElementById("stop").addEventListener("click", () => {
-    if (isSorting) {
-        abort = true;
+    if (isSorting && !isPaused) {
+        isPaused = true;
+        showResumeButton();
+        addLog("Sorting Paused", "swap");
+    }
+});
+
+// Resume button
+document.getElementById("resume").addEventListener("click", () => {
+    if (isSorting && isPaused) {
+        isPaused = false;
+        hideResumeButton();
+        addLog("Sorting Resumed", "default");
     }
 });
 
@@ -499,7 +562,12 @@ document.getElementById("merge").addEventListener("click", async () => {
             abort = false;
             scrollToBars();
             await mergeSortVisualizer(0, array.length - 1);
-        } catch (e) { } finally { isSorting = false; }
+        } catch (e) {
+        } finally {
+            isSorting = false;
+            isPaused = false;
+            hideResumeButton();
+        }
     }
 });
 document.getElementById("quick").addEventListener("click", async () => {
@@ -511,7 +579,12 @@ document.getElementById("quick").addEventListener("click", async () => {
             await quickSort(0, array.length - 1);
             // Final green sweep
             for (let i = 0; i < array.length; i++) await highlight(i, "var(--bar-sorted)");
-        } catch (e) { } finally { isSorting = false; }
+        } catch (e) {
+        } finally {
+            isSorting = false;
+            isPaused = false;
+            hideResumeButton();
+        }
     }
 });
 
