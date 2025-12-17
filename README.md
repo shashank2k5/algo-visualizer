@@ -32,7 +32,7 @@ This project is designed for learning purposes and demonstrates the internal wor
 
 ## 📂 Project Structure
 
-algo-visualizer/
+algo-visualizer
 ─ index.html # Main HTML file
 ─ sorting.css # Styles and animations
 ─ sorting.js # Sorting logic and visualization
