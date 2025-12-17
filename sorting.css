@@ -1,520 +1,551 @@
-const barsContainer = document.getElementById("bars-container");
-const speedSlider = document.getElementById("speed");
-let array = [];
-let abort = false;
-let isSorting = false;
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
 
-const logList = document.getElementById("log-list");
-
-// Complexity Chart
-function renderComplexityChart() {
-    const ctx = document.getElementById('complexityChart').getContext('2d');
-
-    // Generate data points
-    const labels = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-    const nSquared = labels.map(n => n * n);
-    const nLogN = labels.map(n => n * Math.log2(n));
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'O(n²) - Bubble, Insertion, Selection',
-                    data: nSquared,
-                    borderColor: '#ef4444', // Red for slower
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    tension: 0.4
-                },
-                {
-                    label: 'O(n log n) - Merge, Quick',
-                    data: nLogN,
-                    borderColor: '#22c55e', // Green for faster
-                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                    tension: 0.4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: { color: '#94a3b8' }
-                }
-            },
-            scales: {
-                x: {
-                    title: { display: true, text: 'Elements (n)', color: '#94a3b8' },
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: '#334155' }
-                },
-                y: {
-                    title: { display: true, text: 'Operations', color: '#94a3b8' },
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: '#334155' }
-                }
-            }
-        }
-    });
+:root {
+    --bg-dark: #0f172a;
+    --bg-card: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.5);
+    --bar-default: #6366f1;
+    --bar-compare: #eab308;
+    --bar-swap: #ef4444;
+    --bar-sorted: #22c55e;
 }
 
-function addLog(message, type = "default") {
-    const entry = document.createElement("div");
-    entry.className = `log-entry ${type}`;
-    entry.textContent = message;
-    logList.prepend(entry); // Newest top
-    // Keep log clean (max 50 entries)
-    if (logList.children.length > 50) {
-        logList.lastElementChild.remove();
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+header {
+    width: 100%;
+    padding: 1.5rem;
+    background: rgba(30, 41, 59, 0.8);
+    border-bottom: 1px solid #334155;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+main {
+    width: 90%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.controls-container {
+    background: var(--bg-card);
+    padding: 1.5rem;
+    border-radius: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.buttons-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    background: var(--bg-dark);
+    color: var(--text-secondary);
+    border: 1px solid #334155;
+}
+
+.btn:hover {
+    background: #252e42;
+    color: var(--text-primary);
+}
+
+.btn.primary {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: white;
+    border: none;
+}
+
+.btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn.danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+/* Range Slider */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: var(--bg-dark);
+    border-radius: 3px;
+    outline: none;
+    width: 120px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+/* Text Input */
+input[type="text"] {
+    background: var(--bg-dark);
+    border: 1px solid #334155;
+    color: var(--text-primary);
+    padding: 0.6rem;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    width: 150px;
+}
+
+input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* Bars Container styles now handled in layout above, keeping content styles */
+#bars-container {
+    /* height: 400px;  Removed as it's now controlled by parent layout */
+    /* background: var(--bg-card); Removed dup */
+    /* border-radius: 16px; Removed dup */
+    /* border: 1px solid #334155; Removed dup */
+    /* padding: 2rem; Keeping padding might be okay or move to general style */
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid #334155;
+    padding: 2rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+}
+
+.bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    flex: 1;
+    max-width: 50px;
+    margin: 0 1px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease-in-out;
+    /* Smooth movement */
+}
+
+.bar {
+    width: 20px;
+    background: var(--bar-default);
+    /* Use var for dynamic changes */
+    border-radius: 5px 5px 0 0;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+    transition: height 0.3s ease, background-color 0.3s ease;
+}
+
+.bar-val {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* Visualization Layout */
+.visualizer-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: stretch;
+    height: 400px;
+}
+
+#bars-container {
+    flex: 3;
+    height: 100%;
+    margin: 0;
+    /* Reset previous margin/padding if needed */
+}
+
+/* Log Panel */
+#log-container {
+    flex: 1;
+    height: 100%;
+    max-height: none;
+    /* Let it fill height */
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid #334155;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 250px;
+}
+
+#log-container h3 {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#log-list {
+    flex: 1;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.log-entry {
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.log-entry.compare {
+    border-left: 3px solid var(--bar-compare);
+    color: #cbd5e1;
+}
+
+.log-entry.swap {
+    border-left: 3px solid var(--bar-swap);
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.log-entry.sorted {
+    border-left: 3px solid var(--bar-sorted);
+    color: #86efac;
+}
+
+/* Animation Effects */
+@keyframes pulse-swap {
+    0% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+        filter: brightness(1.5);
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
     }
 }
 
-// Generate random array
-function generateArray() {
-    if (isSorting) return;
-    const size = 15; // Fixed reasonable size for visualization
-    array = [];
-    barsContainer.innerHTML = "";
-    if (logList) logList.innerHTML = ""; // Clear logs
-    document.getElementById("custom-input").value = "";
+.bar.swapping {
+    animation: pulse-swap 0.3s ease-in-out;
+    box-shadow: 0 0 10px var(--bar-swap);
+    z-index: 10;
+}
 
-    for (let i = 0; i < size; i++) {
-        let val = Math.floor(Math.random() * 90) + 10;
-        array.push(val);
+/* Complexity Chart */
+#complexity-container {
+    width: 100%;
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid #334155;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
 
-        // Wrapper for bar and text
-        const wrapper = document.createElement("div");
-        wrapper.className = "bar-wrapper";
+#complexity-container h3 {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    text-align: center;
+}
 
-        const bar = document.createElement("div");
-        bar.className = "bar";
-        // Max height relative to container (approx 300px max height)
-        bar.style.height = `${val * 3}px`;
+#complexityChart {
+    width: 100%;
+    max-height: 300px;
+}
 
-        const label = document.createElement("div");
-        label.className = "bar-val";
-        label.textContent = val;
+/* ============================================
+   RESPONSIVE DESIGN - Mobile First Approach
+   ============================================ */
 
-        wrapper.appendChild(bar);
-        wrapper.appendChild(label);
-        barsContainer.appendChild(wrapper);
+/* Tablet and below (< 1024px) */
+@media (max-width: 1024px) {
+    main {
+        width: 95%;
     }
-    addLog(`Generated new random array of size ${size}`, "default");
-}
 
-// Delay based on speed slider
-function getDelay() {
-    // 100 -> 10ms, 1 -> 500ms
-    return Math.max(10, 500 - (speedSlider.value * 4.8));
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// Scroll to bars container on mobile/responsive views
-function scrollToBars() {
-    barsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-
-async function checkAbort() {
-    if (abort) {
-        isSorting = false;
-        throw new Error("Aborted");
+    h1 {
+        font-size: 1.5rem;
     }
-    await sleep(getDelay());
-}
 
-async function updateBar(idx, height, color = null) {
-    const wrappers = document.getElementsByClassName("bar-wrapper");
-    const bar = wrappers[idx].querySelector(".bar");
-    const label = wrappers[idx].querySelector(".bar-val");
+    .visualizer-layout {
+        flex-direction: column;
+        height: auto;
+    }
 
-    bar.style.height = `${height * 3}px`;
-    label.textContent = height;
+    #bars-container {
+        height: 300px;
+        min-height: 300px;
+    }
 
-    if (color) {
-        bar.style.backgroundColor = color;
-        // Add animation class
-        if (color.includes("swap") || color.includes("#ef4444") || color === "red") {
-            bar.classList.add("swapping");
-            setTimeout(() => bar.classList.remove("swapping"), 300);
-        }
+    #log-container {
+        height: 200px;
+        min-height: 200px;
+        min-width: auto;
     }
 }
 
-async function highlight(idx, color) {
-    const wrappers = document.getElementsByClassName("bar-wrapper");
-    if (wrappers[idx]) {
-        wrappers[idx].querySelector(".bar").style.backgroundColor = color;
+/* Mobile (< 640px) */
+@media (max-width: 640px) {
+    header {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    h1 {
+        font-size: 1.3rem;
+    }
+
+    main {
+        width: 100%;
+        padding: 0 0.5rem;
+        gap: 1rem;
+    }
+
+    /* Controls Container */
+    .controls-container {
+        padding: 1rem;
+        gap: 1rem;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .control-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .control-group label {
+        font-size: 0.85rem;
+    }
+
+    /* Buttons */
+    .buttons-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        min-height: 44px;
+        /* Touch target size */
+    }
+
+    /* Inputs */
+    input[type="text"] {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    input[type="range"] {
+        width: 100%;
+    }
+
+    /* Visualizer Layout */
+    .visualizer-layout {
+        gap: 1rem;
+    }
+
+    #bars-container {
+        height: 250px;
+        min-height: 250px;
+        padding: 1rem;
+        gap: 4px;
+    }
+
+    /* Bars */
+    .bar-wrapper {
+        max-width: 30px;
+        margin: 0;
+    }
+
+    .bar {
+        width: 12px;
+    }
+
+    .bar-val {
+        font-size: 0.65rem;
+        margin-top: 0.3rem;
+    }
+
+    /* Log Container */
+    #log-container {
+        height: 180px;
+        min-height: 180px;
+        padding: 0.75rem;
+    }
+
+    #log-container h3 {
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+        padding-bottom: 0.4rem;
+    }
+
+    #log-list {
+        font-size: 0.75rem;
+        gap: 3px;
+    }
+
+    .log-entry {
+        padding: 3px 6px;
+    }
+
+    /* Complexity Chart */
+    #complexity-container {
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    #complexity-container h3 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    #complexityChart {
+        max-height: 250px;
     }
 }
 
-// Helper to swap DOM elements and Array values with animation
-async function swap(i, j) {
-    const wrappers = document.getElementsByClassName("bar-wrapper");
-    const bar1 = wrappers[i];
-    const bar2 = wrappers[j];
-
-    // Visual Highlight
-    const b1 = bar1.querySelector(".bar");
-    const b2 = bar2.querySelector(".bar");
-    b1.style.backgroundColor = "var(--bar-swap)";
-    b2.style.backgroundColor = "var(--bar-swap)";
-    b1.classList.add("swapping");
-    b2.classList.add("swapping");
-
-    // Calculate distance
-    const dist = j - i;
-
-    // Apply transform
-    // Note: This relies on bars being same width/margin. 
-    // We can just swap their positions using transform 100% * dist? 
-    // No, absolute pixels is safer or 100% of own width?
-    // Let's use getBoundingClientRect for precision or just CSS transform based on known width/gap?
-    // Actually, simpler: Wrapper width + margin.
-    // Let's assume uniform width.
-
-    // BUT, simply translated swapping:
-    bar1.style.transform = `translateX(${100 * dist}%)`;
-    bar2.style.transform = `translateX(${-100 * dist}%)`;
-
-    await sleep(getDelay());
-
-    // Reset styles
-    bar1.style.transform = "translateX(0)";
-    bar2.style.transform = "translateX(0)";
-    b1.style.backgroundColor = "var(--bar-default)";
-    b2.style.backgroundColor = "var(--bar-default)";
-    b1.classList.remove("swapping");
-    b2.classList.remove("swapping");
-
-    // Swap in DOM
-    // Simplest robust DOM swap:
-    // Clone nodes? No, keep references.
-    // We want to swap bar1 and bar2 positions.
-    // If they are the same, do nothing.
-    if (bar1 === bar2) return;
-
-    // Check if adjacent
-    const nextI = bar1.nextSibling;
-    const nextJ = bar2.nextSibling;
-
-    // If bar1 is right before bar2
-    if (nextI === bar2) {
-        barsContainer.insertBefore(bar2, bar1);
-    }
-    // If bar2 is right before bar1
-    else if (nextJ === bar1) {
-        barsContainer.insertBefore(bar1, bar2);
-    }
-    // General case
-    else {
-        barsContainer.insertBefore(bar1, nextJ);
-        barsContainer.insertBefore(bar2, nextI);
+/* Extra small mobile (< 375px) */
+@media (max-width: 375px) {
+    h1 {
+        font-size: 1.1rem;
     }
 
-    // Swap global array
-    let temp = array[i];
-    array[i] = array[j];
-    array[j] = temp;
-}
+    .btn {
+        font-size: 0.85rem;
+        padding: 0.7rem 0.8rem;
+    }
 
+    #bars-container {
+        height: 200px;
+        min-height: 200px;
+        padding: 0.75rem;
+        gap: 2px;
+    }
 
-// Bubble Sort
-async function bubbleSort() {
-    try {
-        isSorting = true;
-        abort = false;
-        scrollToBars();
-        const n = array.length;
-        addLog("Starting Bubble Sort", "default");
+    .bar {
+        width: 10px;
+    }
 
-        for (let i = 0; i < n; i++) {
-            for (let j = 0; j < n - i - 1; j++) {
-                await checkAbort();
-                await highlight(j, "var(--bar-compare)");
-                await highlight(j + 1, "var(--bar-compare)");
+    .bar-val {
+        font-size: 0.6rem;
+    }
 
-                if (array[j] > array[j + 1]) {
-                    addLog(`Swap: ${array[j]} > ${array[j + 1]}`, "swap");
-                    await swap(j, j + 1);
-                }
+    #log-container {
+        height: 150px;
+        min-height: 150px;
+    }
 
-                await highlight(j, "var(--bar-default)");
-                await highlight(j + 1, "var(--bar-default)");
-            }
-            await highlight(n - i - 1, "var(--bar-sorted)");
-        }
-        await highlight(0, "var(--bar-sorted)");
-        addLog("Bubble Sort Complete", "sorted");
-    } catch (e) {
-        if (e.message !== "Aborted") console.error(e);
-        addLog("Sorting Aborted", "swap");
-    } finally {
-        isSorting = false;
+    #log-list {
+        font-size: 0.7rem;
     }
 }
 
-// Selection Sort
-async function selectionSort() {
-    try {
-        isSorting = true;
-        abort = false;
-        scrollToBars();
-        const n = array.length;
-        addLog("Starting Selection Sort", "default");
-
-        for (let i = 0; i < n; i++) {
-            let minIdx = i;
-            await highlight(i, "var(--bar-swap)");
-
-            for (let j = i + 1; j < n; j++) {
-                await checkAbort();
-                await highlight(j, "var(--bar-compare)");
-
-                if (array[j] < array[minIdx]) {
-                    if (minIdx !== i) await highlight(minIdx, "var(--bar-default)");
-                    minIdx = j;
-                    await highlight(minIdx, "var(--bar-swap)");
-                } else {
-                    await highlight(j, "var(--bar-default)");
-                }
-            }
-
-            if (minIdx !== i) {
-                addLog(`Swap: Found min ${array[minIdx]}, swapping with ${array[i]}`, "swap");
-                await swap(i, minIdx);
-                // Note: after swap, indices in DOM changed?
-                // swap(i, minIdx) swaps array[i] and array[minIdx] AND DOM nodes.
-                // So array[i] is now the min val. Correct.
-            }
-            await highlight(minIdx, "var(--bar-default)");
-            await highlight(i, "var(--bar-sorted)");
-        }
-        addLog("Selection Sort Complete", "sorted");
-    } catch (e) {
-        if (e.message !== "Aborted") console.error(e);
-        addLog("Sorting Aborted", "swap");
-    } finally { isSorting = false; }
-}
-
-// Insertion Sort
-async function insertionSort() {
-    try {
-        isSorting = true;
-        abort = false;
-        scrollToBars();
-        const n = array.length;
-        addLog("Starting Insertion Sort", "default");
-
-        for (let i = 1; i < n; i++) {
-            let j = i;
-            await highlight(i, "var(--bar-swap)");
-
-            while (j > 0 && array[j - 1] > array[j]) {
-                await checkAbort();
-                await highlight(j - 1, "var(--bar-compare)");
-
-                addLog(`Swap: ${array[j - 1]} > ${array[j]}`, "swap");
-                await swap(j - 1, j);
-
-                await highlight(j, "var(--bar-sorted)"); // part of sorted section
-                j--;
-            }
-            await highlight(j, "var(--bar-sorted)");
-
-            for (let k = 0; k <= i; k++) await highlight(k, "var(--bar-sorted)");
-        }
-        addLog("Insertion Sort Complete", "sorted");
-    } catch (e) {
-        if (e.message !== "Aborted") console.error(e);
-        addLog("Sorting Aborted", "swap");
-    } finally { isSorting = false; }
-}
-
-// Merge Sort
-// Merge sort is hard to animate with direct swaps because it's auxiliary.
-// We'll stick to height updates for Merge Sort for now, or just leave it. 
-// Adding log for consistency.
-async function mergeSortVisualizer(low, high) {
-    if (low >= high) return;
-    const mid = Math.floor((low + high) / 2);
-    await mergeSortVisualizer(low, mid);
-    await mergeSortVisualizer(mid + 1, high);
-    await merge(low, mid, high);
-}
-
-async function merge(low, mid, high) {
-    try {
-        let left = low;
-        let right = mid + 1;
-        let temp = [];
-
-        while (left <= mid && right <= high) {
-            await checkAbort();
-            await highlight(left, "var(--bar-compare)");
-            await highlight(right, "var(--bar-compare)");
-
-            if (array[left] < array[right]) {
-                temp.push(array[left]);
-                await highlight(left, "var(--bar-default)");
-                left++;
-            } else {
-                temp.push(array[right]);
-                await highlight(right, "var(--bar-default)");
-                right++;
-            }
-        }
-
-        while (left <= mid) {
-            await checkAbort();
-            temp.push(array[left]);
-            left++;
-        }
-
-        while (right <= high) {
-            await checkAbort();
-            temp.push(array[right]);
-            right++;
-        }
-
-        for (let i = 0; i < temp.length; i++) {
-            await checkAbort();
-            array[low + i] = temp[i];
-            addLog(`Merge: Writing ${temp[i]} to index ${low + i}`, "swap");
-            await updateBar(low + i, temp[i], "var(--bar-sorted)");
-        }
-    } catch (e) { throw e; }
-}
-
-// Events
-document.getElementById("generate").addEventListener("click", () => {
-    document.getElementById("custom-input").value = ""; // Clear input on random gen
-    generateArray();
-});
-
-document.getElementById("custom-input").addEventListener("change", (e) => {
-    const val = e.target.value;
-    const parts = val.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
-
-    if (parts.length > 0) {
-        if (isSorting) {
-            abort = true;
-            isSorting = false;
-        }
-        array = parts.slice(0, 30); // Limit to reasonable size
-        barsContainer.innerHTML = "";
-        if (logList) logList.innerHTML = ""; // Clear logs
-
-        // Find max for scaling
-        const maxVal = Math.max(...array);
-
-        array.forEach(val => {
-            const wrapper = document.createElement("div");
-            wrapper.className = "bar-wrapper";
-
-            const bar = document.createElement("div");
-            bar.className = "bar";
-            // Scale height relative to max, max height 300px
-            // Prevent div by zero if max is 0
-            const height = maxVal > 0 ? (val / maxVal) * 280 : 0;
-            bar.style.height = `${Math.max(height, 5)}px`; // Min height visibility
-
-            const label = document.createElement("div");
-            label.className = "bar-val";
-            label.textContent = val;
-
-            wrapper.appendChild(bar);
-            wrapper.appendChild(label);
-            barsContainer.appendChild(wrapper);
-        });
+/* Landscape mobile optimization */
+@media (max-width: 900px) and (orientation: landscape) {
+    .visualizer-layout {
+        flex-direction: row;
+        height: 300px;
     }
-});
 
-document.getElementById("stop").addEventListener("click", () => {
-    if (isSorting) {
-        abort = true;
+    #bars-container {
+        flex: 2;
+        height: 100%;
     }
-});
 
-
-
-// Quick Sort
-async function quickSort(low, high) {
-    if (low < high) {
-        let pi = await partition(low, high);
-
-        await quickSort(low, pi - 1);
-        await quickSort(pi + 1, high);
+    #log-container {
+        flex: 1;
+        height: 100%;
+        min-height: auto;
     }
 }
-
-async function partition(low, high) {
-    let pivot = array[high];
-    await highlight(high, "var(--bar-swap)"); // Pivot visual
-
-    let i = (low - 1); // Index of smaller element
-
-    for (let j = low; j <= high - 1; j++) {
-        await checkAbort();
-        await highlight(j, "var(--bar-compare)"); // Compare visual
-
-        if (array[j] < pivot) {
-            i++;
-            // Swap
-            let temp = array[i];
-            array[i] = array[j];
-            array[j] = temp;
-
-            await updateBar(i, array[i]);
-            await updateBar(j, array[j]);
-        }
-        await highlight(j, "var(--bar-default)"); // Reset compare visual
-    }
-    // Swap pivot to correct position
-    let temp = array[i + 1];
-    array[i + 1] = array[high];
-    array[high] = temp;
-
-    await updateBar(i + 1, array[i + 1]);
-    await updateBar(high, array[high]);
-
-    await highlight(high, "var(--bar-default)"); // Reset pivot visual
-    await highlight(i + 1, "var(--bar-sorted)"); // Sorted position visual
-
-    return (i + 1);
-}
-
-document.getElementById("sort").addEventListener("click", () => !isSorting && bubbleSort());
-document.getElementById("selection").addEventListener("click", () => !isSorting && selectionSort());
-document.getElementById("insertion").addEventListener("click", () => !isSorting && insertionSort());
-document.getElementById("merge").addEventListener("click", async () => {
-    if (!isSorting) {
-        try {
-            isSorting = true;
-            abort = false;
-            scrollToBars();
-            await mergeSortVisualizer(0, array.length - 1);
-        } catch (e) { } finally { isSorting = false; }
-    }
-});
-document.getElementById("quick").addEventListener("click", async () => {
-    if (!isSorting) {
-        try {
-            isSorting = true;
-            abort = false;
-            scrollToBars();
-            await quickSort(0, array.length - 1);
-            // Final green sweep
-            for (let i = 0; i < array.length; i++) await highlight(i, "var(--bar-sorted)");
-        } catch (e) { } finally { isSorting = false; }
-    }
-});
-
-// Init
-generateArray();
-renderComplexityChart();
