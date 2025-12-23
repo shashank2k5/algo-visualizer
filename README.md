@@ -77,10 +77,8 @@ cd algo-visualizer
 
 ## 🔮 Future Improvements
 
-- Add advanced sorting algorithms (Merge Sort, Quick Sort, Heap Sort)
-- Speed control for animations
-- Adjustable array size
-- Dark mode support
+- Add advanced sorting algorithms (Heap Sort)
+- Light mode support
 - Pathfinding visualizations
 
 ---
@@ -89,3 +87,6 @@ cd algo-visualizer
 
 **Shashank Sharma**  
 GitHub: https://github.com/shashank2k5
+
+**Anant Sharma**  
+Github: https://github.com/infinityanant
